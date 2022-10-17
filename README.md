@@ -1,2 +1,2 @@
-# Packer
+# Packer Golden Image
  

@@ -1,0 +1,101 @@
+#cloud-config
+autoinstall:
+  version: 1
+  locale: en_US
+  # Ensures that Packer does not connect too soon.
+  early-commands:
+    - sudo systemctl stop ssh
+  keyboard:
+    layout: tr
+    variant: tr
+  network:
+    version: 2
+    renderer: networkd
+    ethernets:
+      ens192:
+        dhcp4: true
+        addresses:
+          - 
+        gateway4: 
+        nameservers:
+          addresses: []
+          search:
+            - 
+  storage:
+    #### Don't create /root/swap.img file
+    swap:
+      size: 0
+    config:
+    #### prep system disks
+    - type: disk
+      id: disk-sda
+      path: /dev/sda
+      preserve: false
+      wipe: superblock-recursive
+      ptable: gpt
+      grub_device: true
+     #### disk partitions
+    - type: partition
+      number: 1
+      id: bios_boot_part   # required by GRUB on first disk
+      size: 1MB
+      device: disk-sda
+      flag: bios_grub
+    - type: partition
+      number: 2
+      id: boot_part       # /boot partition
+      size: 1G
+      device: disk-sda
+      preserve: false
+    - type: partition
+      number: 3
+      id: lvm_part        # add remaining space to LVM
+      size: -1
+      device: disk-sda
+      preserve: false
+     #### LVM volume group and logical volumes
+    - type: lvm_volgroup
+      id: vg0
+      name: vg0
+      devices:
+        - lvm_part
+    - type: lvm_partition
+      id: lvm_root        # create / partition on lvm, all available space
+      volgroup: vg0
+      name: root
+      size: -1
+    #### Format the filesystems
+    - type: format
+      id: fs_boot_part
+      fstype: ext4
+      volume: boot_part
+    - type: format
+      id: fs_root
+      fstype: ext4
+      volume: lvm_root
+    #### Mount the filesystems
+    - type: mount
+      id: mount_boot
+      device: fs_boot_part
+      path: /boot
+    - type: mount
+      id: mount_root
+      device: fs_root
+      path: /
+  identity:
+    hostname: ubuntu
+    username: 
+    password: ''
+  ssh:
+    allow-pw: true
+    authorized-keys: []
+    install-server: true
+  packages:
+    - cloud-init
+    - open-vm-tools
+  user-data:
+    disable_root: false
+  late-commands:
+    - 'sed -i "s/dhcp4: true/&\n      dhcp-identifier: mac/" /target/etc/netplan/00-installer-config.yaml'
+    - echo 'appsys ALL=(ALL) NOPASSWD:ALL' > /target/etc/sudoers.d/appsys
+

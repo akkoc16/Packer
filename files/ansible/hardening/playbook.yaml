@@ -1,0 +1,13 @@
+---
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: checkout ubuntu2004_cis
+      become: true
+      ansible.builtin.git:
+        repo: 'https://github.com/akkoc16/ubuntu2004_cis'
+        dest: roles/ubuntu2004_cis
+        version: main
+    - name: include the hardening role
+      include_role:
+        name: ubuntu2004_cis
